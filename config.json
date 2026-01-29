@@ -1,0 +1,6 @@
+{
+    "dbHost": ".\\UTSQLSERVER2014",
+    "dbName": "DataBaseSQL20230724145927",
+    "dbUser": "sa",
+    "dbPwd": "111"
+}
