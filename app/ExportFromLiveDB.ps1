@@ -230,7 +230,21 @@ function Convert-CsvToExcel {
     Log-Message -Message ('Converting to Excel using csv2xlsx: ' + $ExcelPath + '...') -Color 'White'
     
     if (Test-Path $ExcelPath) {
-        Remove-Item $ExcelPath -Force
+        # Try to remove existing file, handling potential locks
+        try {
+            Remove-Item $ExcelPath -Force -ErrorAction Stop
+        } catch {
+             Log-Message -Message '  -> Warning: File is locked. Attempting to close stuck Excel processes...' -Color 'Yellow'
+             # Try to kill Excel processes that might be locking the file
+             Get-Process excel -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowTitle -eq "" } | Stop-Process -Force -ErrorAction SilentlyContinue
+             Start-Sleep -Seconds 1
+             try {
+                 Remove-Item $ExcelPath -Force -ErrorAction Stop
+             } catch {
+                 Log-Message -Message ('  -> Error: Cannot delete existing Excel file. Close it and try again.') -Color 'Red'
+                 return
+             }
+        }
     }
 
     try {
@@ -275,6 +289,46 @@ function Format-ExcelFile {
         # Column 3: PatientName - Set to 30 (Wide)
         $worksheet.Columns.Item(3).ColumnWidth = 30
         
+        # Hide BirthYear (Column 4)
+        $worksheet.Columns.Item(4).Hidden = $true
+        
+        # Merge duplicate cells for columns 1, 2, 3
+        Log-Message -Message '  -> Merging duplicate cells...' -Color 'White'
+        $lastRow = $worksheet.UsedRange.Rows.Count
+        if ($lastRow -gt 2) {
+            $startRow = 2
+            # Iterate from row 3 to lastRow + 1 to handle the final group
+            for ($r = 3; $r -le ($lastRow + 1); $r++) {
+                $diff = $false
+                if ($r -gt $lastRow) {
+                    $diff = $true
+                } else {
+                    # Compare CheckDate (1) and PatientID (2)
+                    $d1 = $worksheet.Cells.Item($r, 1).Text
+                    $d2 = $worksheet.Cells.Item($r-1, 1).Text
+                    $id1 = $worksheet.Cells.Item($r, 2).Text
+                    $id2 = $worksheet.Cells.Item($r-1, 2).Text
+                    
+                    if (($d1 -ne $d2) -or ($id1 -ne $id2)) {
+                        $diff = $true
+                    }
+                }
+                
+                if ($diff) {
+                    # Merge if range is greater than 1 row
+                    if (($r - 1) -gt $startRow) {
+                        for ($col = 1; $col -le 3; $col++) {
+                            $range = $worksheet.Range($worksheet.Cells.Item($startRow, $col), $worksheet.Cells.Item($r-1, $col))
+                            $range.Merge()
+                            $range.VerticalAlignment = -4108 # xlCenter
+                            $range.HorizontalAlignment = -4108 # xlCenter
+                        }
+                    }
+                    $startRow = $r
+                }
+            }
+        }
+
         $workbook.Save()
         $workbook.Close()
         
@@ -363,7 +417,7 @@ $filter = $sqlDateFilter + '%'
 # Use explicit string concatenation and single quotes to avoid parser confusion
 $reportQuery = 'SELECT ' +
     'SUBSTRING(p.ID, 7, 2) + ''-'' + SUBSTRING(p.ID, 5, 2) + ''-'' + LEFT(p.ID, 4) AS CheckDate, ' +
-    'SUBSTRING(p.ID, 9, LEN(p.ID)) AS ResultNumber, ' +
+    'SUBSTRING(p.ID, 9, LEN(p.ID)) AS PatientID, ' +
     'p.FIRST_NAME AS PatientName, ' +
     'CASE WHEN TRY_CAST(p.AGE AS FLOAT) = 0 THEN NULL ELSE p.AGE END AS BirthYear, ' +
     'c.ITEM AS TestName, ' +
