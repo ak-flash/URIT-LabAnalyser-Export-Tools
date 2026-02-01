@@ -289,8 +289,9 @@ function Format-ExcelFile {
         # Column 3: PatientName - Set to 30 (Wide)
         $worksheet.Columns.Item(3).ColumnWidth = 30
         
-        # Hide BirthYear (Column 4)
+        # Hide BirthYear (Column 4) && Doctor (Column 8)
         $worksheet.Columns.Item(4).Hidden = $true
+        $worksheet.Columns.Item(8).Hidden = $true
         
         # Merge duplicate cells for columns 1, 2, 3
         Log-Message -Message '  -> Merging duplicate cells...' -Color 'White'
@@ -320,14 +321,18 @@ function Format-ExcelFile {
                         for ($col = 1; $col -le 3; $col++) {
                             $range = $worksheet.Range($worksheet.Cells.Item($startRow, $col), $worksheet.Cells.Item($r-1, $col))
                             $range.Merge()
-                            $range.VerticalAlignment = -4108 # xlCenter
-                            $range.HorizontalAlignment = -4108 # xlCenter
+                            $range.VerticalAlignment = -4160 # xlTop
                         }
                     }
                     $startRow = $r
                 }
             }
         }
+
+        # Apply borders to all used cells
+        $usedRange = $worksheet.UsedRange
+        $usedRange.Borders.LineStyle = 1 # xlContinuous
+        $usedRange.Borders.Weight = 2 # xlThin
 
         $workbook.Save()
         $workbook.Close()
