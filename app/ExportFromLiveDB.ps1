@@ -92,8 +92,7 @@ Log-Message -Message ('Target User: ' + $dbUser)
 
 # --- Date Selection Logic ---
 $todayStr = Get-Date -Format 'dd-MM-yyyy'
-# Non-blocking check for input if possible, otherwise Read-Host
-# For simplicity in automation, we can check if args are passed or just use Read-Host
+
 Write-Host ('Введите дату для экспорта (формат dd-MM-yyyy) [По умолчанию: ' + $todayStr + ']: ') -ForegroundColor Cyan -NoNewline
 $defaultDateStr = Read-Host
 
