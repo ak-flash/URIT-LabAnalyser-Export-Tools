@@ -288,10 +288,12 @@ function Format-ExcelFile {
         $worksheet.Columns.Item(1).ColumnWidth = 10
         # Column 3: PatientName - Set to 30 (Wide)
         $worksheet.Columns.Item(3).ColumnWidth = 30
+        # Column 8: ReferenceRange
+        $worksheet.Columns.Item(8).ColumnWidth = 12
         
-        # Hide BirthYear (Column 4) && Doctor (Column 8)
+        # Hide BirthYear (Column 4) && Doctor (Column 9)
         $worksheet.Columns.Item(4).Hidden = $true
-        $worksheet.Columns.Item(8).Hidden = $true
+        $worksheet.Columns.Item(9).Hidden = $true
         
         # Merge duplicate cells for columns 1, 2, 3
         Log-Message -Message '  -> Merging duplicate cells...' -Color 'White'
@@ -428,6 +430,7 @@ $reportQuery = 'SELECT ' +
     'c.ITEM AS TestName, ' +
     'c.RESULT AS TestResult, ' +
     'c.UNIT AS TestUnit, ' +
+    'CAST(c.NORMAL_LOW AS NVARCHAR(50)) + '' - '' + CAST(c.NORMAL_HIGH AS NVARCHAR(50)) AS Reference, ' +
     'p.DOCTOR AS Doctor ' +
     'FROM PATIENT_DATABASE p ' +
     'JOIN check_result c ON p.ID = c.ID ' +
